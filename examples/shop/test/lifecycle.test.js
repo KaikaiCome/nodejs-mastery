@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import net from 'node:net'
+import { once } from 'node:events'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { createLifecycle } from '../lib/lifecycle.js'
 import { createService, createRouter, listen } from '../lib/http.js'
@@ -43,6 +45,22 @@ test('优雅关闭：摘流量 → 等在途请求完成 → 再关闭依赖', a
   assert.deepEqual(events, ['request finished', 'relay stopped', 'db closed'])
   await assert.rejects(get('/healthz'), '关闭后不再接受新连接')
   agent.destroy()
+})
+
+test('关闭不会被“已连接但从未发请求”的连接卡住（fetch 会预建这种备用连接）', async () => {
+  let forced = false
+  const lifecycle = createLifecycle({ timeoutMs: 1000, onForceExit: () => { forced = true } })
+  const server = lifecycle.addServer(createService({ name: 't', router: createRouter(), logger: silentLogger, metrics: createMetrics() }))
+  const { port } = new URL(await listen(server))
+  const socket = net.connect(port, '127.0.0.1')
+  await once(socket, 'connect')
+  const closed = once(socket, 'close')
+
+  const startedAt = performance.now()
+  await lifecycle.shutdown('test')
+  await closed
+  assert.ok(performance.now() - startedAt < 500, '应立即关闭，而不是等到 headersTimeout')
+  assert.equal(forced, false)
 })
 
 test('超时兜底：资源关闭卡住时强制退出', async () => {

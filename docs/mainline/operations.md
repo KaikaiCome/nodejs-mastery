@@ -18,15 +18,18 @@ SIGTERM
 
 ```js
 // lib/lifecycle.js（节选）
-const sweep = setInterval(() => server.closeIdleConnections(), 50)
+// trackConnections 自己统计每条连接上的在途请求数，closeIdle 关闭所有在途数为 0 的连接
+const sweep = setInterval(closeIdle, 50)
 server.close(() => { clearInterval(sweep); resolve() })
-server.closeIdleConnections()
+closeIdle()
 ```
 
-::: danger 一个真实的坑
-`server.close()` 只会关闭**调用那一刻**空闲的 keep-alive 连接。一个在关闭开始时还在处理请求的连接，响应结束后变成空闲，但**不会**被关闭，`close()` 的回调要等到 `keepAliveTimeout`（本项目 65 秒）才触发。
+::: danger 两个真实的坑
+**坑 1**：`server.close()` 只会关闭**调用那一刻**空闲的 keep-alive 连接。一个在关闭开始时还在处理请求的连接，响应结束后变成空闲，但**不会**被关闭，`close()` 的回调要等到 `keepAliveTimeout`（本项目 65 秒）才触发。本项目最初的实现就有这个 bug，是测试“优雅关闭”用 keep-alive Agent 发请求后超时才暴露的。修复：周期性清理空闲连接，并对关闭期间开始的请求返回 `Connection: close`。
 
-本项目最初的实现就有这个 bug，是测试“优雅关闭”用 keep-alive Agent 发请求后超时才暴露的。修复方法是周期性调用 `closeIdleConnections()`，并对关闭期间开始的请求返回 `Connection: close`。
+**坑 2**：只周期性调用 `server.closeIdleConnections()` 还不够。它不会关闭“**已建立但还没发出任何请求**”的连接，而 `fetch`（undici）会预先建立这种备用连接。这个 bug 在本地 Node 25 上测试全绿，到 CI 的 Node 22 上才暴露：关闭卡住 10 秒，被兜底超时强制 `process.exit(1)`。修复：在 `request`/`close` 事件上自己统计每条连接的在途请求数，关闭时销毁所有在途数为 0 的连接。回归测试用 `net.connect` 建一条不发请求的连接，断言关闭能立即完成。
+
+教训：关闭逻辑要用多种客户端行为（keep-alive、空连接）和**多个 Node 版本**测试。CI 的 Node 版本矩阵很有用。
 :::
 
 测试断言了完整顺序：
