@@ -39,25 +39,37 @@
 ### 幂等设计
 
 ```ts
-// 客户端生成 Idempotency-Key，重复提交返回第一次的结果
+// 客户端为“一次下单意图”生成 Idempotency-Key；结果未知时用同一个键重试
 app.post('/orders', async (req, res) => {
   const key = req.get('Idempotency-Key')
-  const ok = await redis.set(`idem:${key}`, 'PROCESSING', 'NX', 'EX', 86400)
+  if (!key || !/^[\w-]{16,64}$/.test(key)) return res.status(400).json({ code: 'IDEMPOTENCY_KEY_REQUIRED' })
+  const redisKey = `idem:${req.user.id}:${key}`            // 按用户隔离，避免不同用户的键互相命中
+  const fingerprint = sha256(stableStringify(req.body))      // 同一个键只能用于同一份请求内容
+
+  // PROCESSING 的 TTL 只需略长于请求超时：进程崩溃后锁能自动释放，而不是锁住一整天
+  const ok = await redis.set(redisKey, JSON.stringify({ state: 'PROCESSING', fingerprint }), 'NX', 'EX', 60)
   if (!ok) {
-    const prev = await redis.get(`idem:${key}`)
-    if (prev === 'PROCESSING') return res.status(409).json({ code: 'IN_PROGRESS' })
-    return res.json(JSON.parse(prev!))
+    const prev = JSON.parse((await redis.get(redisKey))!)
+    if (prev.fingerprint !== fingerprint) return res.status(422).json({ code: 'IDEMPOTENCY_KEY_REUSED' })
+    if (prev.state === 'PROCESSING') return res.status(409).json({ code: 'IN_PROGRESS' })
+    return res.status(prev.status).json(prev.body)
   }
   try {
-    const result = await orderService.create(req.body)
-    await redis.set(`idem:${key}`, JSON.stringify(result), 'EX', 86400)
-    res.json(result)
+    const result = await orderService.create(req.user.id, req.body)
+    await redis.set(redisKey, JSON.stringify({ state: 'DONE', fingerprint, status: 201, body: result }), 'EX', 86400)
+    res.status(201).json(result)
   } catch (e) {
-    await redis.del(`idem:${key}`)
+    await redis.del(redisKey) // 只缓存成功结果：失败后允许用同一个键重试
     throw e
   }
 })
 ```
+
+::: warning 这个版本仍有缺口
+如果 `orderService.create` 已提交、但写回 `DONE` 之前进程崩溃，60 秒后锁过期，重试会**再创建一笔订单**。Redis 与数据库之间没有原子性。
+
+最稳妥的做法是把幂等记录与订单写在**同一个数据库事务**里（唯一约束 `(user_id, key)`），这正是主线项目的实现：[下单：事务、并发与幂等](/mainline/ordering)。
+:::
 
 数据库层兜底：唯一索引（如 `order_no`）。
 

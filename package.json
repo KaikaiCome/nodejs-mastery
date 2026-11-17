@@ -2,13 +2,22 @@
   "name": "nodejs-mastery",
   "version": "1.0.0",
   "private": true,
-  "description": "é¢å‘é«˜çº§å‰ç«¯çš„ Node.js ç²¾é€šä¹‹è·¯ï¼šæ ¸å¿ƒåŽŸç†ã€Express/Koaã€BFFã€ä¼ä¸šçº§æž¶æž„ä¸Žç–‘éš¾æŽ’æŸ¥",
+  "description": "面向高级前端的 Node.js 精通之路：核心原理、Express/Koa、BFF、企业级架构与疑难排查",
   "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
     "preview": "vitepress preview docs",
-    "test:examples": "node --test examples/mini-koa/mini-koa.test.js examples/bff-aggregation/bff.test.js"
+    "test": "npm run test:examples && npm run test:shop && npm run test:labs",
+    "test:examples": "node --test examples/mini-koa/mini-koa.test.js examples/bff-aggregation/bff.test.js",
+    "test:shop": "node --test \"examples/shop/test/*.test.js\"",
+    "test:labs": "node labs/run.js --all --solution",
+    "test:express": "npm --prefix examples/express-basic test",
+    "shop": "node examples/shop/start.js",
+    "lab": "node labs/run.js"
   },
   "devDependencies": {
     "vitepress": "^1.6.3"

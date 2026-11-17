@@ -16,14 +16,17 @@ export default defineConfig({
       { text: 'BFF', link: '/bff/overview' },
       { text: '架构设计', link: '/architecture/backend-thinking' },
       { text: '疑难排查', link: '/troubleshooting/playbook' },
-      { text: '实战项目', link: '/project/capstone' }
+      { text: '实验', link: '/guide/labs' },
+      { text: '主线项目', link: '/mainline/overview' },
+      { text: '毕业项目', link: '/project/capstone' }
     ],
     sidebar: [
       {
         text: '0. 开始',
         items: [
           { text: '学习路线与精通标准', link: '/guide/roadmap' },
-          { text: '前端到后端的思维转变', link: '/guide/mindset' }
+          { text: '前端到后端的思维转变', link: '/guide/mindset' },
+          { text: '动手实验（自动判分）', link: '/guide/labs' }
         ]
       },
       {
@@ -90,7 +93,21 @@ export default defineConfig({
         ]
       },
       {
-        text: '8. 实战与检验',
+        text: '8. 全栈主线项目',
+        items: [
+          { text: '项目总览与学习方法', link: '/mainline/overview' },
+          { text: '数据层：迁移与事务', link: '/mainline/data' },
+          { text: '下单：防超卖与幂等', link: '/mainline/ordering' },
+          { text: '状态机与并发更新', link: '/mainline/state-machine' },
+          { text: 'Outbox 与至少一次投递', link: '/mainline/outbox' },
+          { text: 'BFF 与服务外壳', link: '/mainline/bff' },
+          { text: '前端协作', link: '/mainline/frontend' },
+          { text: '上线与运维', link: '/mainline/operations' },
+          { text: '进阶：走向资深', link: '/mainline/senior' }
+        ]
+      },
+      {
+        text: '9. 实战与检验',
         items: [
           { text: '毕业项目：企业级 BFF', link: '/project/capstone' },
           { text: '可运行示例说明', link: '/project/examples' },

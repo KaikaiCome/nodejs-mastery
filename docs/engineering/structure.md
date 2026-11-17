@@ -79,6 +79,27 @@ const server = app.listen(port)
 }
 ```
 
-- 开发：`tsx watch src/main.ts`；生产：`tsc` 编译后 `node dist/main.js`（Node ≥ 22.6 也可 `--experimental-strip-types`，但生产仍建议编译）。
+- 开发：`tsx watch src/main.ts`；生产：`tsc` 编译后 `node dist/main.js`。
+- Node ≥ 22.18 / 23.6 默认支持**类型剥离**，可直接 `node src/main.ts`。但只支持“可擦除”的语法：`enum`、`namespace`、参数属性（`constructor(private x)`）等需要生成代码的写法会报错。启用 `"erasableSyntaxOnly": true`（TS ≥ 5.8）让编辑器提前发现；导入时写 `.ts` 扩展名并开启 `allowImportingTsExtensions`。类型检查仍需单独运行 `tsc --noEmit`。
 - 规范：ESLint + Prettier + husky + lint-staged + commitlint。
 - monorepo：`pnpm workspace`，抽 `packages/shared-types` 给前端与 BFF 共享。
+
+## 类型安全的前后端契约
+
+TypeScript 的类型在运行时不存在，`req.body as CreateOrderInput` 什么也没校验。可靠的做法是**以运行时 schema 为唯一来源，从中推导类型**：
+
+```ts
+// packages/contracts/order.ts —— 前端与 BFF 共享
+import { z } from 'zod'
+export const CreateOrderInput = z.object({
+  items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(10) })).min(1).max(20)
+})
+export type CreateOrderInput = z.infer<typeof CreateOrderInput>
+
+// BFF：边界处校验，之后的代码拿到的是真正可信的类型
+const input = CreateOrderInput.parse(req.body)
+```
+
+- **对外 API**（多语言客户端、开放平台）：用 OpenAPI 描述，生成客户端与校验代码。
+- **全 TS 团队内部**：共享 zod schema，或用 tRPC / ts-rest 直接共享路由类型。
+- 下游服务返回的数据也是“外部输入”，同样要在 client 层校验，否则下游一次字段改名会以 `undefined` 的形式在页面上才暴露。

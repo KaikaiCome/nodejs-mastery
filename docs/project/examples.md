@@ -1,24 +1,32 @@
 # 可运行示例说明
 
-仓库 [`examples/`](https://github.com/KaikaiCome/nodejs-mastery/tree/main/examples) 目录下的示例都可以直接运行（Node.js ≥ 20）。
+仓库 [`examples/`](https://github.com/KaikaiCome/nodejs-mastery/tree/main/examples) 目录下的示例都可以直接运行（Node.js ≥ 22.13）。
 
 | 示例 | 依赖 | 运行 | 对应章节 |
 | --- | --- | --- | --- |
+| `shop` | 无 | `npm run shop` | [全栈主线项目](../mainline/overview) |
 | `event-loop` | 无 | `node examples/event-loop/order.js` | [事件循环](../core/event-loop) |
 | `mini-koa` | 无 | `node examples/mini-koa/app.js` | [Koa](../framework/koa) |
 | `express-basic` | express, zod | `cd examples/express-basic && npm i && npm start` | [Express](../framework/express)、[工程化](../engineering/foundation) |
 | `bff-aggregation` | 无 | `node examples/bff-aggregation/server.js` | [BFF 聚合](../bff/aggregation)、[稳定性](../bff/resilience) |
 | `troubleshooting` | 无 | `node --inspect examples/troubleshooting/server.js` | [内存与 CPU](../troubleshooting/memory-cpu) |
 
-运行无依赖示例的测试：
+另有 9 个自动判分的[动手实验](../guide/labs)位于 `labs/` 目录。
+
+运行测试：
 
 ```bash
-npm run test:examples
-# 等价于 node --test examples/mini-koa/mini-koa.test.js examples/bff-aggregation/bff.test.js
+npm test                 # mini-koa + bff-aggregation + shop + 全部实验的参考答案
+npm run test:examples    # 只跑 mini-koa 与 bff-aggregation
+npm run test:shop        # 只跑主线项目
+npm run test:labs        # 校验全部实验的参考答案
 
-# express-basic 的测试
-cd examples/express-basic && npm i && npm test
+# express-basic 有自己的依赖
+npm ci --prefix examples/express-basic
+npm run test:express
 ```
+
+CI（`.github/workflows/ci.yml`）在 Node 22 与 24 上运行以上全部测试和站点构建。
 
 ## bff-aggregation 体验
 

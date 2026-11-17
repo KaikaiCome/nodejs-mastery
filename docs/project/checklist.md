@@ -1,31 +1,31 @@
-# 精通自检清单与面试题
+# 自检清单与面试题
 
-能清楚回答并**动手演示**下面每一项，即达到精通。
+能清楚回答下面的问题只代表 **L1（已阅读）**。每一项都尽量附上了能证明你**真正掌握**的证据——实验（🧪，自动判分）或主线项目中的测试与破坏实验（🛒）。证据等级的定义见[学习路线](../guide/roadmap#证据等级)。
 
 ## 运行时
 
-- [ ] 画出事件循环阶段图，解释 nextTick / Promise / setImmediate / setTimeout 执行顺序
+- [ ] 画出事件循环阶段图，解释 nextTick / Promise / setImmediate / setTimeout 执行顺序 · 🧪 `event-loop-yield`
 - [ ] 哪些操作走 libuv 线程池？线程池耗尽有什么表现？
 - [ ] V8 新生代/老生代 GC；为什么容器中要设置 `--max-old-space-size`
-- [ ] Stream 背压原理；`pipe` 与 `pipeline` 区别
+- [ ] Stream 背压原理；`pipe` 与 `pipeline` 区别 · 🧪 `stream-upload`
 - [ ] CJS 与 ESM 的差异、互操作、循环依赖表现
 - [ ] cluster 与 worker_threads 的区别与适用场景
-- [ ] AsyncLocalStorage 原理与用途
+- [ ] AsyncLocalStorage 原理与用途 · 🛒 `lib/context.js`
 
 ## 框架
 
 - [ ] 手写 koa-compose，解释为什么要 `i <= index` 检查
 - [ ] Express 错误中间件如何识别？Express 4 的 async 错误为什么丢失？
-- [ ] Koa 与 Express 中间件模型对比；何时选 NestJS/Fastify
+- [ ] Koa 与 Express 中间件模型对比；何时选 NestJS/Fastify · 🧪 `koa-timeout`
 - [ ] NestJS 请求生命周期（Middleware/Guard/Interceptor/Pipe/Filter）
 
 ## BFF
 
 - [ ] BFF 的职责边界与反模式
-- [ ] 如何设计首页聚合接口，核心与非核心依赖如何区分
-- [ ] 超时链路如何设计？什么是 deadline 传递？
+- [ ] 如何设计首页聚合接口，核心与非核心依赖如何区分 · 🛒 [BFF 章节](../mainline/bff)
+- [ ] 超时链路如何设计？什么是 deadline 传递？ · 🛒 `lib/upstream.js`
 - [ ] 重试的前提条件；重试风暴如何避免
-- [ ] 熔断器三种状态与参数含义；手写一个
+- [ ] 熔断器三种状态与参数含义；手写一个 · 🧪 `resilient-call`
 - [ ] DataLoader 原理（同一 tick 批量 + 缓存）与为什么必须每请求新建
 - [ ] Web 端登录态方案对比；BFF Token Handler 模式
 - [ ] GraphQL 的 N+1、复杂度攻击与持久化查询
@@ -34,22 +34,32 @@
 
 - [ ] 分层与依赖方向；如何做依赖注入
 - [ ] 统一错误处理与错误码设计
-- [ ] 缓存穿透/击穿/雪崩与解决方案
-- [ ] 幂等设计；分布式锁的问题；Outbox 模式
+- [ ] 缓存穿透/击穿/雪崩与解决方案 · 🧪 `cache-singleflight`
+- [ ] 幂等设计；分布式锁的问题；Outbox 模式 · 🛒 [下单](../mainline/ordering)、[Outbox](../mainline/outbox)
 - [ ] 限流算法对比
 - [ ] 如何估算容量与实例数
 - [ ] 模块化单体与微服务拆分时机
-- [ ] OWASP：越权、SSRF、原型污染、ReDoS 的防护
+- [ ] OWASP：越权、SSRF、原型污染、ReDoS 的防护 · 🧪 `security`
+
+## 数据与一致性
+
+- [ ] 用条件更新（`UPDATE ... WHERE stock >= ?`）与事务防止超卖，并用并发测试证明 · 🛒 [下单](../mainline/ordering)
+- [ ] 幂等键的作用域、请求指纹、“处理中”状态与只缓存成功结果 · 🛒 [下单](../mainline/ordering)
+- [ ] 订单状态机；并发支付与取消只有一个成功 · 🛒 [状态机](../mainline/state-machine)
+- [ ] 可回滚的数据库迁移（expand/contract）与迁移校验和 · 🛒 [数据层](../mainline/data)
+- [ ] 双写问题；Outbox + Inbox；为什么“恰好一次”其实是“至少一次 + 幂等” · 🛒 [Outbox](../mainline/outbox)
+- [ ] 游标分页与 OFFSET 分页的区别 · 🛒 [数据层](../mainline/data)
+- [ ] 前端如何配合幂等键（生命周期、何时换新键、哪些错误可重试） · 🛒 [前端协作](../mainline/frontend)
 
 ## 运维与排障
 
-- [ ] 优雅关闭完整流程；Docker 中 PID 1 问题
+- [ ] 优雅关闭完整流程；Docker 中 PID 1 问题 · 🧪 `graceful-shutdown` · 🛒 [运维](../mainline/operations)
 - [ ] liveness 与 readiness 的区别，为何 liveness 不应检查下游
-- [ ] keepAliveTimeout 导致 502 的原理
+- [ ] keepAliveTimeout 导致 502 的原理 · 🧪 `http-server`
 - [ ] 内存泄漏定位步骤（三次快照对比 + Retainers）
 - [ ] CPU 火焰图怎么读
 - [ ] 事件循环延迟如何监控、多大算异常
-- [ ] RED 指标、标签基数问题
+- [ ] RED 指标、标签基数问题 · 🛒 `lib/metrics.js`
 - [ ] OpenTelemetry 如何跨服务传递上下文
 
 ## 高频面试题（附思路）

@@ -24,7 +24,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run test:examples
+      - run: npm ci --prefix examples/express-basic
+      - run: npm test
+      - run: npm run test:express
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

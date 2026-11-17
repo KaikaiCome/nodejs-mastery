@@ -16,7 +16,8 @@ export const httpDuration = new client.Histogram({
 })
 app.use((req, res, next) => {
   const end = httpDuration.startTimer()
-  res.on('finish', () => end({ method: req.method, route: req.route?.path ?? 'unknown', status: res.statusCode }))
+  // req.route 只包含子路由内的路径；挂载在 Router 下时要拼上 req.baseUrl，否则 /users/:id 与 /orders/:id 会混在一起
+  res.on('finish', () => end({ method: req.method, route: req.route ? req.baseUrl + req.route.path : 'unmatched', status: res.statusCode }))
   next()
 })
 app.get('/metrics', async (req, res) => { res.set('Content-Type', client.register.contentType); res.end(await client.register.metrics()) })

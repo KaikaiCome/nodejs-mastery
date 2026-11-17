@@ -55,7 +55,9 @@ async function fetchWithTimeout(url, ms = 3000) {
 // 客户端断开时，取消所有下游请求
 app.get('/page', async (req, res) => {
   const ac = new AbortController()
-  req.on('close', () => ac.abort())
+  // 推荐监听 res 的 'close' 并判断响应是否写完：语义明确——“连接在响应完成前就断了”。
+  // req 的 'close' 触发时机在不同 Node 版本中有过变化（16.x 曾在请求体读完时就触发），容易误取消正常请求。
+  res.on('close', () => { if (!res.writableFinished) ac.abort() })
   const data = await fetch(UPSTREAM, { signal: ac.signal })
 })
 ```
@@ -68,16 +70,22 @@ app.get('/page', async (req, res) => {
 | 程序错误（bug） | `undefined.x`、逻辑错误 | 记录日志 + 告警；严重时让进程退出由守护进程重启 |
 
 ```js
+// 注意：一旦注册了 unhandledRejection 监听器，Node 就不再执行默认的“崩溃退出”，
+// 退出必须由你自己完成。只打日志等于把默认的安全行为关掉了。
 process.on('unhandledRejection', (reason) => {
-  logger.error({ reason }, 'unhandledRejection')
-  // Node ≥ 15 默认会让进程崩溃，这是好事：不要静默吞掉
+  logger.fatal({ reason }, 'unhandledRejection')
+  gracefulShutdown().finally(() => process.exit(1))
 })
 process.on('uncaughtException', (err) => {
   logger.fatal({ err }, 'uncaughtException')
-  // 进程已处于未知状态：优雅关闭后退出
+  // 进程已处于未知状态：尽快优雅关闭后退出，由守护进程/K8s 重启
   gracefulShutdown().finally(() => process.exit(1))
 })
 ```
+
+::: tip 默认行为
+Node ≥ 15 在**没有** `unhandledRejection` 监听器时，未处理的 rejection 会以 uncaughtException 的形式让进程退出（`--unhandled-rejections=throw`）。注册监听器只是为了在退出前记录日志和优雅关闭，而不是为了“活下去”。
+:::
 
 ::: danger 不要这样做
 `process.on('uncaughtException', () => {})` 吞掉异常继续运行，会导致连接、锁、事务处于不一致状态，后果比崩溃更严重。

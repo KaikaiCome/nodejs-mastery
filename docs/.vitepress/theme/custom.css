@@ -39,6 +39,19 @@
   border: 1px solid var(--vp-c-divider);
   border-radius: 4px;
 }
+.progress-mark .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.progress-mark .hint { font-size: 13px; color: var(--vp-c-text-2); }
+.progress-board .fill.lab { background: linear-gradient(90deg, #2f6fb0, #5a9be0); }
+.progress-board .note { font-size: 13px; color: var(--vp-c-text-2); }
+.progress-board .lab-badge {
+  margin-left: 8px;
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-text-2);
+}
+.progress-board .lab-badge.passed { border-color: #2f6fb0; color: #2f6fb0; }
 :root {
   --vp-c-brand-1: #3c873a;
   --vp-c-brand-2: #4d9a4b;

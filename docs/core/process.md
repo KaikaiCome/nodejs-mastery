@@ -62,23 +62,38 @@ if (cluster.isPrimary) {
 ## 优雅关闭（Graceful Shutdown）
 
 ```js
+const { setTimeout: sleep } = require('node:timers/promises')
 let shuttingDown = false
+app.get('/readyz', (req, res) => res.status(shuttingDown ? 503 : 200).end())
+
 async function shutdown(signal) {
   if (shuttingDown) return
-  shuttingDown = true
+  shuttingDown = true // 1. readiness 立即返回 503，LB 开始摘流量
   logger.info({ signal }, 'shutting down')
-  // 1. 健康检查返回 503，让 LB 摘流量
-  // 2. 停止接收新连接，等待在途请求完成
-  server.close()
-  server.closeIdleConnections?.()
-  // 3. 关闭资源
-  await Promise.allSettled([db.end(), redis.quit(), mq.close()])
-  // 4. 兜底超时
+  // 2. 兜底超时要最先设置：后面任何一步卡住都能强制退出
   setTimeout(() => process.exit(1), 10_000).unref()
+  // 3. 给 LB / K8s Endpoint 传播留出时间，期间仍正常处理请求
+  await sleep(5_000)
+  // 4. 停止接收新连接，并“等待”在途请求完成
+  await new Promise((resolve) => {
+    // close() 只关闭此刻空闲的 keep-alive 连接；在途请求结束后才空闲的连接需要反复清理
+    const sweep = setInterval(() => server.closeIdleConnections(), 100)
+    server.close(() => { clearInterval(sweep); resolve() })
+    server.closeIdleConnections()
+  })
+  // 5. 在途请求都结束了，才能关闭它们依赖的资源
+  await Promise.allSettled([db.end(), redis.quit(), mq.close()])
+  process.exit(0)
 }
 process.on('SIGTERM', shutdown)
 process.on('SIGINT', shutdown)
 ```
+
+::: danger 常见错误顺序
+`server.close()` 不传回调、不 `await`，紧接着关闭数据库——此时在途请求仍在执行，会因为连接池已关闭而失败。正确的顺序永远是：**摘流量 → 等在途请求结束 → 关资源 → 退出**。
+
+完整可运行的实现与测试见主线项目 [`examples/shop/lib/lifecycle.js`](https://github.com/KaikaiCome/nodejs-mastery/blob/main/examples/shop/lib/lifecycle.js)，对应实验：`npm run lab -- graceful-shutdown`。
+:::
 
 ::: warning
 Docker 中 `CMD npm start` 会让 npm 成为 PID 1，**SIGTERM 不会转发给 node**。使用 `CMD ["node", "dist/main.js"]` 或 `tini`。

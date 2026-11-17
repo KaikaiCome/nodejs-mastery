@@ -49,11 +49,14 @@ module.exports = {
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: bff-web }
+metadata: { name: bff-web, labels: { app: bff-web } }
 spec:
   replicas: 4
+  # apps/v1 必填：selector 必须与 Pod 模板的 labels 匹配，且创建后不可修改
+  selector: { matchLabels: { app: bff-web } }
   strategy: { rollingUpdate: { maxSurge: 25%, maxUnavailable: 0 } }
   template:
+    metadata: { labels: { app: bff-web } }
     spec:
       terminationGracePeriodSeconds: 30
       containers:
@@ -76,7 +79,8 @@ spec:
 :::
 
 - HPA：基于 CPU 或自定义指标（QPS、事件循环延迟）自动扩缩容。
-- `--max-old-space-size` 约为 memory limit 的 75%，否则 V8 不知道容器限制，可能被 OOMKilled。
+- 显式设置 `--max-old-space-size`（约为 memory limit 的 70%~75%）。较新的 Node 会参考 cgroup 内存限制来决定默认堆上限，但默认值不一定适合你的服务，而且堆外内存（Buffer、原生模块）也占用 limit；显式配置让 OOM 前先触发 GC 压力和告警，行为可预期。
+- `terminationGracePeriodSeconds` 必须大于 `preStop` 时长 + 应用自身的关闭超时，否则 K8s 会在优雅关闭完成前发送 SIGKILL。
 
 ## CI/CD 流水线
 
