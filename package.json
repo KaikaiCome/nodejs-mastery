@@ -2,13 +2,13 @@
   "name": "nodejs-mastery",
   "version": "1.0.0",
   "private": true,
-  "description": "面向高级前端的 Node.js 精通之路：核心原理、Express/Koa、BFF、企业级架构与疑难排查",
+  "description": "é¢å‘é«˜çº§å‰ç«¯çš„ Node.js ç²¾é€šä¹‹è·¯ï¼šæ ¸å¿ƒåŽŸç†ã€Express/Koaã€BFFã€ä¼ä¸šçº§æž¶æž„ä¸Žç–‘éš¾æŽ’æŸ¥",
   "type": "module",
   "scripts": {
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
     "preview": "vitepress preview docs",
-    "test:examples": "node --test \"examples/mini-koa/*.test.js\" \"examples/bff-aggregation/*.test.js\""
+    "test:examples": "node --test examples/mini-koa/mini-koa.test.js examples/bff-aggregation/bff.test.js"
   },
   "devDependencies": {
     "vitepress": "^1.6.3"

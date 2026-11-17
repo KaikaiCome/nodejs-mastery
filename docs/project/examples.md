@@ -14,7 +14,7 @@
 
 ```bash
 npm run test:examples
-# 等价于 node --test "examples/mini-koa/*.test.js" "examples/bff-aggregation/*.test.js"
+# 等价于 node --test examples/mini-koa/mini-koa.test.js examples/bff-aggregation/bff.test.js
 
 # express-basic 的测试
 cd examples/express-basic && npm i && npm test
